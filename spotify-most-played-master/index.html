@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Most Played for Spotify</title>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Vue lazy load -->
+    <script src="js/vue-lazyload.js"></script>
+    <!-- Vue.js -->
+    <script src="js/vue.js"></script>
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+    <!-- My stuff -->
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="js/index.js"></script>
+</head>
+<body>
+    <div id="app" class="pb-3">
+
+        <!-- Modal: Generate Playlist -->
+        <div class="modal fade" id="playlistModal" tabindex="-1" role="dialog" aria-labelledby="playlistModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="playlistModalLabel">
+                            Make a playlist
+                            <!-- Icon from Bootstrap icons -->
+                            <svg width="1em" height="1em" viewBox="0 0 16 16" class="ml-1 bi bi-music-note-list" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 13c0 1.105-1.12 2-2.5 2S7 14.105 7 13s1.12-2 2.5-2 2.5.895 2.5 2z"/>
+                                <path fill-rule="evenodd" d="M12 3v10h-1V3h1z"/>
+                                <path d="M11 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 16 2.22V4l-5 1V2.82z"/>
+                                <path fill-rule="evenodd" d="M0 11.5a.5.5 0 0 1 .5-.5H4a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5zm0-4A.5.5 0 0 1 .5 7H8a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5zm0-4A.5.5 0 0 1 .5 3H8a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">
+                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-x" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" d="M11.854 4.146a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708-.708l7-7a.5.5 0 0 1 .708 0z"/>
+                                    <path fill-rule="evenodd" d="M4.146 4.146a.5.5 0 0 0 0 .708l7 7a.5.5 0 0 0 .708-.708l-7-7a.5.5 0 0 0-.708 0z"/>
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="bg-dark text-light card card-body mb-2">
+                            <div class="row" v-if="top.tracks[state.term].items">
+                                <div class="col-sm-3 pr-sm-0 pb-3 pb-sm-0">
+                                    <div class="playlist-preview-images mx-auto">
+                                        <img v-for="img of playlist_preview_images(top.tracks[state.term].items)" :src="img">
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <span class="d-block mb-0" style="font-size: 0.5rem;">
+                                        PLAYLIST PREVIEW
+                                    </span>
+                                    <h5 class="mb-0">
+                                        {{ playlist_name }}
+                                    </h5>
+                                    <div style="font-size: 0.7rem; line-height: 1.2rem; opacity: 75%;">
+                                        {{ playlist_description }}<br>
+                                        {{ top.tracks[state.term].items.length }} songs, {{ playlist_runtime(top.tracks[state.term].items) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <form>
+                            <select class="custom-select" v-model="state.term">
+                                <option v-for="(val, key) in terms" :value="key">
+                                    {{ val.name }}
+                                </option>
+                            </select>
+                            <div class="custom-control custom-switch mt-2">
+                                <input type="checkbox" class="custom-control-input" id="playlistModalPublicSwitch" v-model="playlist_generation.public">
+                                <label class="custom-control-label" for="playlistModalPublicSwitch">
+                                    Make playlist public 
+                                    <small class="text-muted">
+                                        (visible on your profile)
+                                    </small>
+                                </label>
+                            </div>
+                        </form>
+                        <div v-if="playlist_generation.url" class="alert alert-success mt-2 mb-0" role="alert">
+                            Playlist generated successfully!
+                            <a :href="playlist_generation.url" class="alert-link" style="text-decoration:underline;" target="_blank">Click here to open</a>.
+                        </div>
+                        <div v-if="playlist_generation.error" class="alert alert-danger mt-2 mb-0" role="alert">
+                            An error occurred ({{ playlist_generation.error }}). Please try again later.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-success d-inline-block my-1" v-on:click="create_playlist">
+                            <span v-if="playlist_generation.in_progress">
+                                <div class="spinner-border spinner-border-sm mr-1" role="status"></div>
+                                Creating...
+                            </span>
+                            <span v-else>
+                                Make playlist
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="navbar navbar-dark bg-dark">
+            <a class="navbar-brand" href="">Most Played for Spotify</a>
+        </nav>
+
+        <div class="container mb-5" v-cloak :class="{ 'd-none': !loaded }" style="position: relative;">
+
+            <!-- User info box -->
+            <div v-show="userinfo" class="d-flex my-3 p-3" v-cloak>
+                <div class="d-inline-block mx-auto">
+                    <div class="media">
+                        <img v-if="user_image" class="img-fluid rounded align-center-self mr-3" style="max-width: 5rem;" :src="user_image">
+                        <div class="media-body my-auto">
+                            <h4 class="mb-0">
+                                {{ userinfo.display_name }} {{ country_flag }}
+                            </h4>
+                            <small>
+                                <a class="link-unstyled" :href="userinfo.external_urls.spotify" target="_blank">
+                                    {{ userinfo.id }}
+                                </a>
+                                <span v-if="userinfo.followers">
+                                    &bullet;
+                                    {{ userinfo.followers.total }} 
+                                    follower<span v-if="userinfo.followers != 1">s</span>   
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <select class="custom-select d-inline-block d-md-none" v-model="state.term">
+                <option v-for="(val, key) in terms" :value="key">
+                    {{ val.name }}
+                </option>
+            </select>
+
+            <div class="nav-tabs-right-buttons d-block">
+
+                <!-- Playlist button - triggers modal -->
+                <button type="button" class="btn btn-success d-inline-block mt-1 mb-n4 mb-md-1" data-toggle="modal" data-target="#playlistModal">
+                    Make playlist!
+                </button>
+
+                <!-- Term selector for md or higher-->
+                <div class="dropdown mb-n4 d-none d-md-inline-block">
+                    <button class="btn btn-secondary dropdown-toggle my-1" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        {{ terms[state.term].name }}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+                        <a v-for="(val, key) in terms" class="dropdown-item" v-bind:class="{ active: state.term == key }" v-on:click.prevent="state.term = key" href="#">
+                            {{ val.name }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs - change between artists/tracks -->
+            <ul class="nav nav-tabs mt-n3 type-nav">
+                <li v-for="(val, key) in types" class="nav-item d-block">
+                    <br>
+                    <button class="nav-link" v-bind:class="{ active: state.type == key }" v-on:click.stop.prevent="state.type = key" data-target="#">
+                        <span class="d-none d-md-inline">Top</span>
+                        {{ val }}
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Table for tracks -->
+            <table class="table table-sm" v-show="state.type == 'tracks'">
+                <thead>
+                    <tr>
+                        <th scope="col" class="number-col">#</th>
+                        <th scope="col">Track</th>
+                        <th scope="col" class="d-none d-md-table-cell w-50">Album</th>
+                        <th scope="col" class="d-none d-md-table-cell runtime-col">&nbsp;🕐</th>
+                    </tr>
+                </thead>
+                <tbody v-for="(val, key) in terms" v-show="state.term == key" v-lazy-container="{ selector: 'img' }">
+                    <tr v-for="(track, index) in top.tracks[state.term].items">
+                        <th scope="row" class="text-center">{{ index + 1 }}</th>
+                        <td>
+                            <div class="media">
+                                <a v-if="second_last_image(track.album.images)" :href="spotify_url(track)" target="_blank">
+                                    <img class="track-image align-center-self" :data-src="second_last_image(track.album.images)" :alt="track.album.name">
+                                </a>
+                                <div class="media-body my-auto w-100">
+                                    {{ track.name }}
+                                    <div class="text-muted small">
+                                        <!-- <span v-if="track.explicit" class="explicit">&#x1F174;</span> -->
+                                        <span v-if="track.explicit" class="explicit">🅴</span>
+                                        <span v-for="(artist, key) in track.artists">
+                                            <a class="link-unstyled" :href="spotify_url(artist)">
+                                                {{ artist.name }}</a><span v-if="key !== track.artists.length-1">, </span>
+
+                                        </span>
+                                        <span class="d-inline d-md-none">
+                                            &bullet;
+                                            <a class="link-unstyled" :href="spotify_url(track.album)">
+                                                {{ track.album.name }}
+                                            </a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="d-none d-md-table-cell text-muted">
+                            <span class="d-none d-md-inline">
+                                <a class="link-unstyled" :href="spotify_url(track.album)">
+                                    {{ track.album.name }}
+                                </a>
+                            </span>
+                        </td>
+                        <td class="d-none d-md-table-cell text-muted">
+                            {{ ms_to_duration(track.duration_ms) }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Table for artists -->
+            <table class="table table-sm" v-show="state.type == 'artists'">
+                <thead>
+                    <tr>
+                        <th scope="col" class="number-col">#</th>
+                        <th scope="col">Artist</th>
+                        <th scope="col" class="d-none d-md-table-cell w-50">Genres</th>
+                    </tr>
+                </thead>
+                <tbody v-for="(val, key) in terms" v-show="state.term == key"  v-lazy-container="{ selector: 'img' }">
+                    <tr v-for="(artist, index) in top.artists[key].items">
+                        <th scope="row" class="text-center">{{ index + 1 }}</th>
+                        <td>
+                            <div class="media">
+                                <a v-if="second_last_image(artist.images)" :href="spotify_url(artist)">
+                                    <img class="img-fluid rounded track-image align-center-self" :data-src="second_last_image(artist.images)" :alt="artist.name">
+                                </a>
+                                <div class="media-body my-auto">
+                                    {{ artist.name }}
+                                    <br>
+                                    <span v-for="genre in artist.genres.slice(0,2)" class="d-md-none badge badge-light mx-1">{{ genre }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <span v-for="genre in artist.genres" class="badge badge-light mx-1">{{ genre }}<br></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+        <div class="container" v-if="!loaded">
+            <!-- Not loaded -->
+            <span class="text-center loading-text">
+                Loading...
+            </span>
+        </div>
+
+    </div>
+
+    <div class="footer py-2 container-fluid bg-dark text-light" style="font-size: 0.8rem">
+        <div class="container">
+            <div class="d-inline-block">
+                By <a class="link-unstyled" href="https://kushagr.net/">Kush Mittal</a>.
+                Open source on <a class="link-unstyled" href="https://github.com/theKKCD/spotify-most-played/">GitHub</a>.<br>
+                Not affiliated with Spotify.
+            </div>
+            <div class="d-none d-md-inline-block my-auto" style="float: right;">
+                Metadata from <img class="d-inline-block" height=20px src="img/Spotify_Logo_RGB_White.svg">
+            </div>
+            
+        </div>
+    </div>
+    <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "f2d333bb804e45d6b76a573325146194"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
