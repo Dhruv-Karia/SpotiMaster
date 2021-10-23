@@ -1,7 +1,6 @@
 const CLIENT_ID = 'f4c17d1f14ea4bfa8ef898a4a2f39706';
 const REDIRECT_URI = 'http://127.0.0.1:8080/';
 const BASEURL = 'https://api.spotify.com/v1';
-
 Vue.use(VueLazyload);
 
 var app = new Vue({
@@ -28,12 +27,21 @@ var app = new Vue({
             term: 'short'
         },
         types: {
+            tracks: 'Tracks',
             artists: 'Artists'
         },
         terms: {
             short: {
                 name: 'Short Term (~4 weeks)',
                 description: "the past 4 weeks",
+            },
+            medium: {
+                name: 'Medium Term (~6 months)',
+                description: "the past 6 months",
+            },
+            long: {
+                name: 'Long Term (All time)',
+                description: "all time",
             }
         },
         playlist_generation: {
@@ -63,10 +71,18 @@ var app = new Vue({
                 [dateArray[0], dateArray[1]] = [dateArray[1], dateArray[0]];
             }
             return dateArray.join('/');
+        },
+        playlist_name: function() {
+            return `Most Played: ${ this.terms[this.state.term].name }, ${ this.locale_date }`
+        },
+        playlist_description: function() {
+            return `Your most played tracks from ${ this.terms[this.state.term].description }.`
         }
     },
     watch: {
-        
+        'state.term': function() {
+            this.playlist_generation.url = this.playlist_generation.error = '';
+        },
         access_token: function() {
             if (!access_token) { return }
             this.axios = axios.create({
@@ -135,7 +151,36 @@ var app = new Vue({
             return `${hours} hr ${minutes} min`
         },
         create_playlist: function() {
-
+            if (!this.axios) { return }
+            this.playlist_generation.in_progress = true;
+            this.playlist_generation.error = '';
+            this.axios.post(`/users/${this.userinfo.id}/playlists`, {
+                name: this.playlist_name,
+                description: `${this.playlist_description} Made at https://mostplayed.kushagr.net/`,
+                public: this.playlist_generation.public,
+            })
+            .then((response) => {
+                console.log(response);
+                if (!(response.status == 200 || response.status == 201)) {
+                    this.playlist_generation.error = `Error code ${response.status}. Please try again later.`
+                }
+                else {
+                    const playlistResponse = response;
+                    const id = response.data.id;
+                    this.axios.post(`/playlists/${id}/tracks`, {
+                        uris: this.top.tracks[this.state.term].items.map(x => x.uri)
+                    }).then((response) => {
+                        console.log(response);
+                        this.playlist_generation.in_progress = false;
+                        if (!(response.status == 200 || response.status == 201)) {
+                            this.playlist_generation.error = `${response.status}`
+                        }
+                        else {
+                            this.playlist_generation.url = playlistResponse.data.external_urls.spotify;
+                        }
+                    });
+                }
+            });
         }
     }
 });
@@ -183,5 +228,3 @@ else {
     localStorage.removeItem(stateKey);
     if (access_token) { app.access_token = access_token }
 }
-
-console.log(app)
